@@ -1,5 +1,5 @@
 // Service worker de ¡güao! — cache para uso offline
-const CACHE = 'guao-v1';
+const CACHE = 'guao-v2';
 const ASSETS = ['index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', (e) => {
@@ -14,17 +14,15 @@ self.addEventListener('activate', (e) => {
   self.clients.claim();
 });
 
-// Cache-first: la app funciona sin conexión
+// Network-first para la app (siempre trae la última versión si hay internet);
+// cae al caché solo si no hay conexión.
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
   e.respondWith(
-    caches.match(e.request).then((hit) => {
-      if (hit) return hit;
-      return fetch(e.request).then((res) => {
-        const copy = res.clone();
-        caches.open(CACHE).then((c) => c.put(e.request, copy)).catch(() => {});
-        return res;
-      }).catch(() => caches.match('index.html'));
-    })
+    fetch(e.request).then((res) => {
+      const copy = res.clone();
+      caches.open(CACHE).then((c) => c.put(e.request, copy)).catch(() => {});
+      return res;
+    }).catch(() => caches.match(e.request).then((hit) => hit || caches.match('index.html')))
   );
 });
